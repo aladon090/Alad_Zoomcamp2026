@@ -1,0 +1,84 @@
+version: '3.8'
+
+
+services:
+  # -------------------------------------------------------
+  # Main PostgreSQL Database
+  # Used for storing the NYC Taxi dataset
+  # -------------------------------------------------------
+  postgres:
+    image: postgres:18                # Latest PostgreSQL major version
+    container_name: pgdatabase
+    environment:
+      POSTGRES_USER: root             # Superuser (for ingestion and pgAdmin)
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: ny_taxi            # Default DB created automatically
+    ports:
+      - "5432:5432"                   # Expose DB to host (DBeaver, scripts, etc.)
+    volumes:
+      - ny_taxi_postgres_data:/var/lib/postgresql   # Persist database files
+    networks:
+      - pg-network
+
+
+  # -------------------------------------------------------
+  # pgAdmin — Visual Database Management Tool
+  # View tables, run SQL, create schemas, debug ingestion
+  # URL: http://localhost:8085
+  # -------------------------------------------------------
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com    # Login for pgAdmin UI
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "8085:80"                                # Browser → container port
+    depends_on:
+      - postgres                                 # Must start after PostgreSQL
+    networks:
+      - pg-network
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin            # Saves servers + configs
+
+
+  # -------------------------------------------------------
+  # Ingestion Container
+  # Runs your Python script to ingest NYC Taxi CSV → PostgreSQL
+  # Build context must include your Dockerfile
+  # CSV is mounted directly into the container
+  # -------------------------------------------------------
+  ingest:
+    build: .                                     # Build from Dockerfile in this folder
+    container_name: taxi_ingest
+    depends_on:
+      - postgres                                 # Don't ingest until DB is ready
+    networks:
+      - pg-network
+    volumes:
+      # Mount the compressed dataset from host → /app/ inside container
+      - ./yellow_tripdata_2021-01.csv.gz:/app/yellow_tripdata_2021-01.csv.gz
+    environment:
+      # Used by your Python ingestion script
+      CSV_FILE: /app/yellow_tripdata_2021-01.csv.gz
+      # You should add DB connection values here if needed
+      # HOST: postgres
+      # USER: root
+      # PASSWORD: root
+      # DB: ny_taxi
+
+
+# ---------------------------------------------------------
+# Persistent Volumes — survive container restarts
+# ---------------------------------------------------------
+volumes:
+  ny_taxi_postgres_data:
+  pgadmin_data:
+
+
+# ---------------------------------------------------------
+# Shared Network — allows all containers to communicate
+# ---------------------------------------------------------
+networks:
+  pg-network:
+    driver: bridge
