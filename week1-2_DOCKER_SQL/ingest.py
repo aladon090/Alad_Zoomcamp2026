@@ -66,7 +66,7 @@ def load_to_postgres(batches_iter, engine):
         print(f"Inserting batch {count}...")
         b_start = time.time()
         batch_df.to_sql(
-            name='ny_taxi_data_loaded',
+            name='NY_TAXI',
             con=engine,
             if_exists='append',
             index=False,

@@ -18,10 +18,10 @@ WORKDIR /app
 
 # Copy Python script into the container
 # Copy Python script and CSV into the container
-COPY ingest.py yellow_tripdata_2021-01.csv.gz ./
-
+#COPY ingest.py yellow_tripdata_2021-01.csv.gz ./
+COPY ingest_zone.py taxi_zone_lookup.csv ./
 
 
 
 # Default command to run the script
-ENTRYPOINT ["python", "ingest.py"]
+ENTRYPOINT ["python", "ingest_zone.py"]
